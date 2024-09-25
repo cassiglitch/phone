@@ -22,9 +22,9 @@
     </div>
 
     <script>
-        document.getElementById('generateBtn').addEventListener('click', function() {
+        document.getElementById('generateBtn').addEventListener('click', async function() {
             const length = parseInt(document.getElementById('lengthInput').value);
-            const sequences = generateSequences(length);
+            const sequences = await generateSequencesInBatches(length);
             
             // Display the sequences in the textarea
             document.getElementById('outputArea').value = sequences.join('\n');
@@ -38,34 +38,32 @@
             });
         });
 
-        function generateSequences(length = 7) {
+        async function generateSequencesInBatches(length = 7, batchSize = 100000) {
             const numbers = [...Array(10).keys()]; // [0-9]
             const result = [];
-            const seenSequences = new Set();
+            const totalSequences = Math.pow(10, length);
 
-            // Recursive function to build sequences
-            function buildSequence(currentSequence) {
-                if (currentSequence.length === length) {
-                    const sequenceStr = currentSequence.join('');
-                    if (!seenSequences.has(sequenceStr)) {
-                        result.push(currentSequence.slice()); // Add unique sequence to result
-                        seenSequences.add(sequenceStr); // Mark this sequence as seen
+            for (let i = 0; i < totalSequences; i += batchSize) {
+                const end = Math.min(i + batchSize, totalSequences);
+                
+                for (let j = i; j < end; j++) {
+                    let currentSequence = [];
+                    let temp = j;
+
+                    for (let k = 0; k < length; k++) {
+                        currentSequence.push(numbers[temp % 10]);
+                        temp = Math.floor(temp / 10);
                     }
-                    return;
+
+                    result.push(currentSequence.join('')); // Convert to string
                 }
 
-                // Add next number and recursively build further
-                for (const number of numbers) {
-                    currentSequence.push(number);
-                    buildSequence(currentSequence);
-                    currentSequence.pop(); // Backtrack to try the next possibility
-                }
+                // Update UI after processing a batch
+                document.getElementById('outputArea').value = result.join('\n');
+                await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI to update
             }
 
-            // Start building sequences
-            buildSequence([]);
-
-            return result.map(seq => seq.join('')); // Join each sequence as a string for display
+            return result;
         }
 
         // Function to trigger file download
