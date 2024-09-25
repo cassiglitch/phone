@@ -30,10 +30,14 @@
             document.getElementById('outputArea').value = sequences.join('\n');
             
             // Enable the download button
-            document.getElementById('downloadBtn').style.display = 'block';
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.style.display = 'block';
+
+            // Change background color to green
+            document.body.classList.add('green-background');
 
             // Trigger file download when the button is clicked
-            document.getElementById('downloadBtn').addEventListener('click', function() {
+            downloadBtn.addEventListener('click', function() {
                 downloadFile(sequences.join('\n'), 'phone_numbers.txt');
             });
         });
