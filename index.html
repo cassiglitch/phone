@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Sequence Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Number Sequence Generator</h1>
+        <div class="input-section">
+            <label for="lengthInput">Sequence Length:</label>
+            <input type="number" id="lengthInput" value="7" min="1" max="10">
+            <button id="generateBtn">Generate Sequences</button>
+        </div>
+        <div class="output-section">
+            <h2>Generated Sequences</h2>
+            <textarea id="outputArea" readonly></textarea>
+        </div>
+        <button id="downloadBtn" style="display:none;">Download as phone_numbers.txt</button>
+    </div>
+
+    <script>
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            const length = parseInt(document.getElementById('lengthInput').value);
+            const sequences = generateSequences(length);
+            
+            // Display the sequences in the textarea
+            document.getElementById('outputArea').value = sequences.join('\n');
+            
+            // Enable the download button
+            document.getElementById('downloadBtn').style.display = 'block';
+
+            // Trigger file download when the button is clicked
+            document.getElementById('downloadBtn').addEventListener('click', function() {
+                downloadFile(sequences.join('\n'), 'phone_numbers.txt');
+            });
+        });
+
+        function generateSequences(length = 7) {
+            const numbers = [...Array(10).keys()]; // [0-9]
+            const result = [];
+            const seenSequences = new Set();
+
+            // Recursive function to build sequences
+            function buildSequence(currentSequence) {
+                if (currentSequence.length === length) {
+                    const sequenceStr = currentSequence.join('');
+                    if (!seenSequences.has(sequenceStr)) {
+                        result.push(currentSequence.slice()); // Add unique sequence to result
+                        seenSequences.add(sequenceStr); // Mark this sequence as seen
+                    }
+                    return;
+                }
+
+                // Add next number and recursively build further
+                for (const number of numbers) {
+                    currentSequence.push(number);
+                    buildSequence(currentSequence);
+                    currentSequence.pop(); // Backtrack to try the next possibility
+                }
+            }
+
+            // Start building sequences
+            buildSequence([]);
+
+            return result.map(seq => seq.join('')); // Join each sequence as a string for display
+        }
+
+        // Function to trigger file download
+        function downloadFile(content, fileName) {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link); // Append the link to the body
+            link.click(); // Simulate a click to trigger the download
+            document.body.removeChild(link); // Clean up
+        }
+    </script>
+</body>
+</html>
