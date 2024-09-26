@@ -22,6 +22,49 @@
     </div>
 
     <script>
+        const workerCode = `
+            let preGeneratedSequences = [];
+
+            function generateSequences(length, batchSize) {
+                const numbers = [...Array(10).keys()]; // [0-9]
+                const totalSequences = Math.pow(10, length); // 10^length
+
+                for (let i = 0; i < totalSequences; i += batchSize) {
+                    const result = [];
+
+                    for (let j = i; j < Math.min(i + batchSize, totalSequences); j++) {
+                        let currentSequence = [];
+                        let temp = j;
+
+                        for (let k = 0; k < length; k++) {
+                            currentSequence.push(numbers[temp % 10]);
+                            temp = Math.floor(temp / 10);
+                        }
+
+                        result.push(currentSequence.join('')); // Convert to string
+                    }
+
+                    preGeneratedSequences.push(...result); // Store sequences in batches
+                }
+
+                // Notify completion
+                self.postMessage({ complete: true, sequences: preGeneratedSequences });
+            }
+
+            self.onmessage = function(event) {
+                const length = event.data;
+                const batchSize = 1000; // Adjust as needed for performance
+
+                // Generate sequences only once when worker starts
+                if (preGeneratedSequences.length === 0) {
+                    generateSequences(length, batchSize);
+                }
+            };
+        `;
+
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+
         document.getElementById('generateBtn').addEventListener('click', function() {
             const length = parseInt(document.getElementById('lengthInput').value);
             const outputArea = document.getElementById('outputArea');
@@ -31,29 +74,25 @@
             outputArea.value = '';
             downloadBtn.style.display = 'none';
 
-            // Create a Web Worker
-            const worker = new Worker('worker.js');
+            // Post message to worker
             worker.postMessage(length);
-
-            worker.onmessage = function(event) {
-                const sequences = event.data;
-
-                // Display the sequences in the textarea
-                outputArea.value += sequences.join('\n') + '\n';
-
-                // Show the download button only after all sequences are generated
-                if (sequences.length > 0) {
-                    downloadBtn.style.display = 'block';
-                    downloadBtn.onclick = function() {
-                        downloadFile(sequences.join('\n'), 'phone_numbers.txt');
-                    };
-                }
-            };
-
-            worker.onerror = function(error) {
-                console.error('Worker error:', error);
-            };
         });
+
+        worker.onmessage = function(event) {
+            if (event.data.complete) {
+                const sequences = event.data.sequences;
+
+                // Clear the output area and display all sequences
+                document.getElementById('outputArea').value = sequences.join('\\n');
+
+                // Show the download button when all sequences are generated
+                const downloadBtn = document.getElementById('downloadBtn');
+                downloadBtn.style.display = 'block';
+                downloadBtn.onclick = function() {
+                    downloadFile(sequences.join('\\n'), 'phone_numbers.txt');
+                };
+            }
+        };
 
         function downloadFile(content, fileName) {
             const blob = new Blob([content], { type: 'text/plain' });
