@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Number Sequence Generator</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Basic styling for progress bar */
+        #progressContainer {
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        #progressBar {
+            height: 20px;
+            width: 0;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -13,74 +32,87 @@
             <label for="lengthInput">Sequence Length:</label>
             <input type="number" id="lengthInput" value="7" min="1" max="10">
             <button id="generateBtn">Generate Sequences</button>
-        </div>
-        <div class="output-section">
-            <h2>Generated Sequences</h2>
-            <textarea id="outputArea" readonly></textarea>
+            <div id="loadingMessage" style="display:none;">Generating sequences, please wait...</div>
+            <div id="progressContainer" style="display:none;">
+                <div id="progressBar">0%</div>
+            </div>
         </div>
         <button id="downloadBtn" style="display:none;">Download as phone_numbers_list.txt</button>
     </div>
 
     <script>
-        let generatedSequenceString = ''; // Stores the string with \n for all sequences
+        const chunkSize = 1000; // Number of sequences per chunk
+        let generatedChunks = []; // Array to hold Blob chunks
 
         async function generateSequences(length) {
-            const numbers = [...Array(10).keys()]; // [0-9]
             const totalSequences = Math.pow(10, length); // 10^length
-            const outputArea = document.getElementById('outputArea');
-            let outputText = '';
+            let currentChunk = []; // Current chunk of sequences
 
             for (let i = 0; i < totalSequences; i++) {
-                let currentSequence = [];
-                let temp = i;
+                let currentSequence = i.toString().padStart(length, '0');
+                currentChunk.push(currentSequence);
 
-                for (let k = 0; k < length; k++) {
-                    currentSequence.push(numbers[temp % 10]);
-                    temp = Math.floor(temp / 10);
+                if (currentChunk.length >= chunkSize) {
+                    await saveChunk(currentChunk);
+                    currentChunk = []; // Reset for the next chunk
                 }
 
-                const sequenceString = currentSequence.join('');
-                outputText += sequenceString + '\n'; // For displaying in the textarea
-                generatedSequenceString += sequenceString + '\n'; // Append to global string
+                // Update progress bar
+                updateProgressBar(i + 1, totalSequences);
 
-                // Update textarea every 1000 sequences for better performance
                 if (i % 1000 === 0) {
-                    outputArea.value = outputText;
-                    await new Promise(resolve => setTimeout(resolve, 0)); // Yield to UI
+                    await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
 
-            outputArea.value = outputText; // Final update after loop
+            if (currentChunk.length > 0) {
+                await saveChunk(currentChunk);
+            }
+        }
+
+        async function saveChunk(chunk) {
+            const content = chunk.join('\n') + '\n';
+            const blob = new Blob([content], { type: 'text/plain' });
+            generatedChunks.push(blob);
+        }
+
+        function updateProgressBar(current, total) {
+            const progressBar = document.getElementById('progressBar');
+            const percentage = Math.round((current / total) * 100);
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
         }
 
         document.getElementById('generateBtn').addEventListener('click', async function() {
             const length = parseInt(document.getElementById('lengthInput').value);
-            const outputArea = document.getElementById('outputArea');
             const downloadBtn = document.getElementById('downloadBtn');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const progressContainer = document.getElementById('progressContainer');
 
-            // Reset output area and generated string
-            outputArea.value = '';
-            generatedSequenceString = '';
-            downloadBtn.style.display = 'none';
+            // Disable the generate button
+            this.disabled = true; 
+            generatedChunks = [];
+            downloadBtn.style.display = 'none'; // Hide download button initially
+            loadingMessage.style.display = 'block'; // Show loading message
+            progressContainer.style.display = 'block'; // Show progress container
+            updateProgressBar(0, Math.pow(10, length)); // Reset progress bar
 
-            // Generate sequences
             await generateSequences(length);
 
-            // Show the download button when all sequences are generated
-            downloadBtn.style.display = 'block';
-            downloadBtn.onclick = function() {
-                // Convert string into an array when download is clicked
-                const sequencesArray = generatedSequenceString.trim().split('\n');
+            loadingMessage.style.display = 'none'; // Hide loading message
+            progressContainer.style.display = 'none'; // Hide progress container
+            downloadBtn.style.display = 'block'; // Show download button
 
-                // Join the array back into a string without any numbering or extra characters
-                const formattedArrayString = sequencesArray.join('\n');
-
-                downloadFile(formattedArrayString, 'phone_numbers_list.txt');
-            };
+            // Re-enable the generate button
+            this.disabled = false; 
         });
 
-        function downloadFile(content, fileName) {
-            const blob = new Blob([content], { type: 'text/plain' });
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const combinedBlob = new Blob(generatedChunks, { type: 'text/plain' });
+            downloadFile(combinedBlob, 'phone_numbers_list.txt');
+        });
+
+        function downloadFile(blob, fileName) {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = fileName;
