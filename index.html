@@ -72,8 +72,8 @@
                 // Convert string into an array when download is clicked
                 const sequencesArray = generatedSequenceString.trim().split('\n');
 
-                // Format the array into a plain numbered list
-                const formattedArrayString = sequencesArray.map((seq, index) => `${index + 1}: ${seq}`).join('\n');
+                // Join the array back into a string without any numbering or extra characters
+                const formattedArrayString = sequencesArray.join('\n');
 
                 downloadFile(formattedArrayString, 'phone_numbers_list.txt');
             };
