@@ -1,13 +1,14 @@
-self.onmessage = function(event) {
-    const length = event.data;
-    const batchSize = 1000; // Smaller batch size
+let preGeneratedSequences = [];
+
+function generateSequences(length) {
+    const batchSize = 1000;
     const numbers = [...Array(10).keys()]; // [0-9]
-    const result = [];
     const totalSequences = Math.pow(10, length);
 
     for (let i = 0; i < totalSequences; i += batchSize) {
         const end = Math.min(i + batchSize, totalSequences);
-        
+        const result = [];
+
         for (let j = i; j < end; j++) {
             let currentSequence = [];
             let temp = j;
@@ -20,7 +21,23 @@ self.onmessage = function(event) {
             result.push(currentSequence.join('')); // Convert to string
         }
 
-        // Send the current batch back to the main thread
-        self.postMessage(result);
+        preGeneratedSequences.push(...result); // Store all sequences
+    }
+}
+
+self.onmessage = function(event) {
+    const length = event.data;
+
+    // Generate sequences only once when worker starts
+    if (preGeneratedSequences.length === 0) {
+        generateSequences(length);
+    }
+
+    // Send all pre-generated sequences back
+    self.postMessage(preGeneratedSequences);
+
+    // Notify when generation is complete
+    if (preGeneratedSequences.length === Math.pow(10, length)) {
+        self.postMessage({ complete: true });
     }
 };
