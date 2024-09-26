@@ -41,11 +41,13 @@
                 // Display the sequences in the textarea
                 outputArea.value += sequences.join('\n') + '\n';
 
-                // Enable the download button
-                downloadBtn.style.display = 'block';
-                downloadBtn.onclick = function() {
-                    downloadFile(sequences.join('\n'), 'phone_numbers.txt');
-                };
+                // Show the download button only after all sequences are generated
+                if (sequences.length > 0) {
+                    downloadBtn.style.display = 'block';
+                    downloadBtn.onclick = function() {
+                        downloadFile(sequences.join('\n'), 'phone_numbers.txt');
+                    };
+                }
             };
 
             worker.onerror = function(error) {
