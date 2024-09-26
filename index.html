@@ -22,50 +22,35 @@
     </div>
 
     <script>
-        const workerCode = `
-            let preGeneratedSequences = [];
+        async function generateSequences(length) {
+            const numbers = [...Array(10).keys()]; // [0-9]
+            const totalSequences = Math.pow(10, length); // 10^length
+            const outputArea = document.getElementById('outputArea');
+            let outputText = '';
 
-            function generateSequences(length, batchSize) {
-                const numbers = [...Array(10).keys()]; // [0-9]
-                const totalSequences = Math.pow(10, length); // 10^length
+            for (let i = 0; i < totalSequences; i++) {
+                let currentSequence = [];
+                let temp = i;
 
-                for (let i = 0; i < totalSequences; i += batchSize) {
-                    const result = [];
-
-                    for (let j = i; j < Math.min(i + batchSize, totalSequences); j++) {
-                        let currentSequence = [];
-                        let temp = j;
-
-                        for (let k = 0; k < length; k++) {
-                            currentSequence.push(numbers[temp % 10]);
-                            temp = Math.floor(temp / 10);
-                        }
-
-                        result.push(currentSequence.join('')); // Convert to string
-                    }
-
-                    preGeneratedSequences.push(...result); // Store sequences in batches
+                for (let k = 0; k < length; k++) {
+                    currentSequence.push(numbers[temp % 10]);
+                    temp = Math.floor(temp / 10);
                 }
 
-                // Notify completion
-                self.postMessage({ complete: true, sequences: preGeneratedSequences });
+                outputText += currentSequence.join('') + '\\n';
+
+                // Update textarea every 1000 sequences for better performance
+                if (i % 1000 === 0) {
+                    outputArea.value = outputText;
+                    await new Promise(resolve => setTimeout(resolve, 0)); // Yield to UI
+                }
             }
 
-            self.onmessage = function(event) {
-                const length = event.data;
-                const batchSize = 1000; // Adjust as needed for performance
+            outputArea.value = outputText; // Final update after loop
+            return outputText;
+        }
 
-                // Generate sequences only once when worker starts
-                if (preGeneratedSequences.length === 0) {
-                    generateSequences(length, batchSize);
-                }
-            };
-        `;
-
-        const blob = new Blob([workerCode], { type: 'application/javascript' });
-        const worker = new Worker(URL.createObjectURL(blob));
-
-        document.getElementById('generateBtn').addEventListener('click', function() {
+        document.getElementById('generateBtn').addEventListener('click', async function() {
             const length = parseInt(document.getElementById('lengthInput').value);
             const outputArea = document.getElementById('outputArea');
             const downloadBtn = document.getElementById('downloadBtn');
@@ -74,25 +59,15 @@
             outputArea.value = '';
             downloadBtn.style.display = 'none';
 
-            // Post message to worker
-            worker.postMessage(length);
+            // Generate sequences
+            const outputText = await generateSequences(length);
+
+            // Show the download button when all sequences are generated
+            downloadBtn.style.display = 'block';
+            downloadBtn.onclick = function() {
+                downloadFile(outputText, 'phone_numbers.txt');
+            };
         });
-
-        worker.onmessage = function(event) {
-            if (event.data.complete) {
-                const sequences = event.data.sequences;
-
-                // Clear the output area and display all sequences
-                document.getElementById('outputArea').value = sequences.join('\\n');
-
-                // Show the download button when all sequences are generated
-                const downloadBtn = document.getElementById('downloadBtn');
-                downloadBtn.style.display = 'block';
-                downloadBtn.onclick = function() {
-                    downloadFile(sequences.join('\\n'), 'phone_numbers.txt');
-                };
-            }
-        };
 
         function downloadFile(content, fileName) {
             const blob = new Blob([content], { type: 'text/plain' });
