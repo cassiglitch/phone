@@ -18,7 +18,7 @@
             <h2>Generated Sequences</h2>
             <textarea id="outputArea" readonly></textarea>
         </div>
-        <button id="downloadBtn" style="display:none;">Download as sequences.json</button>
+        <button id="downloadBtn" style="display:none;">Download as phone_numbers_list.txt</button>
     </div>
 
     <script>
@@ -69,14 +69,18 @@
             // Show the download button when all sequences are generated
             downloadBtn.style.display = 'block';
             downloadBtn.onclick = function() {
-                // Convert string into array when download is clicked
+                // Convert string into an array when download is clicked
                 const sequencesArray = generatedSequenceString.trim().split('\n');
-                downloadFile(sequencesArray, 'sequences.json');
+
+                // Format the array as a numbered list string for a .txt file
+                const formattedArrayString = sequencesArray.map((seq, index) => `${index + 1}: ${seq}`).join('\n');
+
+                downloadFile(formattedArrayString, 'phone_numbers_list.txt');
             };
         });
 
-        function downloadFile(sequences, fileName) {
-            const blob = new Blob([JSON.stringify(sequences, null, 2)], { type: 'application/json' });
+        function downloadFile(content, fileName) {
+            const blob = new Blob([content], { type: 'text/plain' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = fileName;
