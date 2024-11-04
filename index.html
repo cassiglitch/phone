@@ -43,6 +43,8 @@
 
             <button id="generateBtn">Generate Sequences</button>
 
+            <div id="sequenceCount" style="margin-top: 10px; font-weight: bold;"></div> <!-- New element to display sequence count -->
+            
             <div id="loadingMessage" style="display:none;">Generating sequences, please wait...</div>
             <div id="progressContainer" style="display:none;">
                 <div id="progressBar">0%</div>
@@ -56,7 +58,6 @@
         const chunkSize = 1000; // Number of sequences per chunk
         let generatedChunks = []; // Array to hold Blob chunks
 
-        // Function to generate all possible combinations of a given number set
         function* generateCombinations(set, length, allowDuplicates) {
             if (length === 1) {
                 yield* set;
@@ -71,17 +72,18 @@
         }
 
         async function generateSequences(length, numberSet, allowDuplicates) {
-            // If duplicates are disabled but the sequence length is greater than the number of unique characters
             if (!allowDuplicates && length > numberSet.length) {
-                allowDuplicates = true;  // Force duplicates
-                document.getElementById('warningMessage').style.display = 'block'; // Show warning message
+                allowDuplicates = true;
+                document.getElementById('warningMessage').style.display = 'block';
             } else {
-                document.getElementById('warningMessage').style.display = 'none'; // Hide warning message
+                document.getElementById('warningMessage').style.display = 'none';
             }
 
             const totalSequences = allowDuplicates 
                 ? Math.pow(numberSet.length, length) 
                 : factorial(numberSet.length) / factorial(numberSet.length - length);
+
+            document.getElementById('sequenceCount').textContent = `Total sequences to be generated: ${totalSequences.toLocaleString()}`; // Display total sequence count
 
             let currentChunk = []; // Current chunk of sequences
             const generator = generateCombinations(numberSet, length, allowDuplicates); // Generator for sequences
@@ -92,10 +94,9 @@
 
                 if (currentChunk.length >= chunkSize) {
                     await saveChunk(currentChunk);
-                    currentChunk = []; // Reset for the next chunk
+                    currentChunk = [];
                 }
 
-                // Update progress bar
                 updateProgressBar(i + 1, totalSequences);
 
                 if (i % 1000 === 0) {
@@ -134,21 +135,19 @@
             const loadingMessage = document.getElementById('loadingMessage');
             const progressContainer = document.getElementById('progressContainer');
 
-            // Disable the generate button
-            this.disabled = true; 
+            this.disabled = true;
             generatedChunks = [];
-            downloadBtn.style.display = 'none'; // Hide download button initially
-            loadingMessage.style.display = 'block'; // Show loading message
-            progressContainer.style.display = 'block'; // Show progress container
+            downloadBtn.style.display = 'none';
+            loadingMessage.style.display = 'block';
+            progressContainer.style.display = 'block';
 
             await generateSequences(length, numberSet, allowDuplicates);
 
-            loadingMessage.style.display = 'none'; // Hide loading message
-            progressContainer.style.display = 'none'; // Hide progress container
-            downloadBtn.style.display = 'block'; // Show download button
+            loadingMessage.style.display = 'none';
+            progressContainer.style.display = 'none';
+            downloadBtn.style.display = 'block';
 
-            // Re-enable the generate button
-            this.disabled = false; 
+            this.disabled = false;
         });
 
         document.getElementById('downloadBtn').addEventListener('click', function() {
